@@ -5,6 +5,7 @@ const util = require('../util')
 const path = require('path')
 var multer = require('multer')
 
+
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
         cb(null, 'uploads/');
@@ -16,15 +17,56 @@ const storage = multer.diskStorage({
     }
 });
 const fileFilter = (req,file,cb)=>{
-    if(file.mimetype === 'image/jpeg'|| file.mimetype === 'image/png')
-     {cb(null,true);}
-    //reject a file
-    else{cb(null,true);}
+    var ext = path.extname(file.originalname)
+    console.log(ext)
+    console.log(path)
+    
+    if( ext !== '.jpeg'&& ext !== '.jpg'&& ext !=='.png'&& ext !=='.mp4'&&ext !=='.wmv'&&ext !=='.gif'
+        &&ext !=='.avi' &&ext !=='.mov'&&ext !== '.3gp'&& ext !== '.ts'&&ext !=='.flv')
+        {
+        //reject a file
+        //
+         return cb(new Error('Only Images & Videos of min 25MB size are allowed'))
+    }{
+        cb(null,true);
+    }
  };
- const uploads = multer({storage:storage,filefilter:fileFilter})
- //Endpoints--------------------------
+ const uploads = multer({storage:storage,limits:{
+                                         files:1,
+                                         fileSize:25*1024*1024*1024,
+                                        },
+                        fileFilter:fileFilter})
+
+    //VAlidation error handler in case of error in multer
+    function makeMulterUploadMiddleware(multerUploadFunction) {
+        return (req, res, next) =>
+            multerUploadFunction(req, res, err => {
+                // handle Multer error
+                if (err && err.name && err.name === 'MulterError') {
+                    return res.status(500).send({
+                        error: err.name,
+                        message: `File upload error: ${err.message}`,
+                    });
+                }
+                // handle other errors
+                if (err) {
+                    return res.status(500).send({
+                        error: 'FILE UPLOAD ERROR',
+                        message: 'Something wrong ocurred when trying to upload the file, may be you send other than images/videos OR file size gretaer than of 25MB.',
+                    });
+                }
+    
+                next();
+            });
+        }
+        const multerMiddleware = makeMulterUploadMiddleware(uploads.single('file'));
+ 
+    //Endpoints-Starts-------------------------
 
 router.get('/',util.testAuthentication)
-router.post('/',uploads.single('file'),util.pinFileToIPFS)
+router.post('/',multerMiddleware,util.pinFileToIPFS)
+router.post('/test',uploads.single('file'),(req,res)=>{
+    console.log(req.file)
+})
 
 module.exports=  router;

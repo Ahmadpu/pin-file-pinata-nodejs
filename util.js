@@ -2,6 +2,7 @@
 const axios = require('axios')
 const fs=require('fs')
 const FormData= require('form-data')
+const path = require('path')
 
 /////test might we have connected with pinata
 //////////////////////////////////////////
